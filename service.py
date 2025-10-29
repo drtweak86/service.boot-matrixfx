@@ -1,5 +1,7 @@
+cat > ~/.kodi/addons/service.boot-matrixfx/service.py <<'EOF'
 # -*- coding: utf-8 -*-
-import xbmc, xbmcgui, xbmcaddon, random, time
+import xbmc, xbmcgui, xbmcaddon
+import random, time
 
 ADDON  = xbmcaddon.Addon(id="service.boot-matrixfx")
 LOGTAG = "[service.boot-matrixfx] "
@@ -7,14 +9,14 @@ LOGTAG = "[service.boot-matrixfx] "
 def log(msg, level=xbmc.LOGINFO):
     xbmc.log(LOGTAG + str(msg), level)
 
-def _get_float(key, fallback):
+def get_float(key, fallback):
     try:
         v = ADDON.getSetting(key)
         return float(v) if v else fallback
     except Exception:
         return fallback
 
-def _get_int(key, fallback):
+def get_int(key, fallback):
     try:
         v = ADDON.getSetting(key)
         return int(float(v)) if v else fallback
@@ -24,18 +26,18 @@ def _get_int(key, fallback):
 class RainWindow(xbmcgui.WindowDialog):
     def __init__(self, secs=8.0, columns=48, speed_px=18, font="font13"):
         super().__init__()
-        self.duration = secs
-        self.columns  = columns
-        self.speed    = speed_px
-        self.font     = font
-        self.w, self.h = self.getWidth(), self.getHeight()
-        self.abort = False
+        self.duration = max(0.5, float(secs))
+        self.columns  = max(1, int(columns))
+        self.speed    = max(1, int(speed_px))
+        self.font     = font or "font13"
 
-        # Katakana + A-Z + digits
-        self.glyphs = u"アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン" \
-                      u"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        self.w = self.getWidth()
+        self.h = self.getHeight()
 
-        self.col_w = max(10, self.w // max(1, self.columns))
+        # Tight glyph set (fullwidth katakana + digits + A–Z) with no spaces
+        self.glyphs = u"ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+        self.col_w = max(10, self.w // self.columns)
         self.controls, self.state = [], []
 
         # black backdrop
@@ -67,10 +69,10 @@ class RainWindow(xbmcgui.WindowDialog):
             y, length = self.state[idx]
             y += self.speed
             if y > self.h:
-                y = random.randint(-self.h//2, -20)
+                y = random.randint(-self.h // 2, -20)
                 length = random.randint(8, 22)
                 ctl.setLabel(self._rand_string(length))
-                # subtle color flicker
+                # subtle head highlight sometimes
                 ctl.setTextColor("55A8FF55" if random.random() > 0.3 else "88CCFF88")
             ctl.setPosition(ctl.getX(), y)
             self.state[idx][0] = y
@@ -82,27 +84,39 @@ class RainWindow(xbmcgui.WindowDialog):
         mon = xbmc.Monitor()
         while (time.time() - t0) < self.duration and not mon.abortRequested():
             self._tick()
-            xbmc.sleep(16)  # ~60 FPS
+            xbmc.sleep(16)  # ~60fps
 
     def onAction(self, action):
-        # let OK/back close early without breaking anything
+        # any key/touch closes early
         self.close()
 
+class Service(xbmc.Monitor):
+    def run(self):
+        log("service starting")
+        # Wait for Kodi home so we have a surface
+        while not xbmc.getCondVisibility("Window.IsVisible(home)"):
+            if self.abortRequested():
+                log("aborted before home")
+                return
+            xbmc.sleep(150)
+        xbmc.sleep(400)  # tiny settle
+        secs  = get_float("duration", 8.0)
+        cols  = get_int("columns", 48)
+        speed = get_int("speed_px", 18)
+        font  = ADDON.getSetting("font") or "font13"
+        log(f"starting rain: secs={secs} cols={cols} speed={speed} font={font}")
+        win = RainWindow(secs, cols, speed, font)
+        try:
+            win.show()
+            win.run()
+        finally:
+            try:
+                win.close()
+            except:
+                pass
+        log("service finished")
+
 if __name__ == "__main__":
-    # Wait until home is visible so we have a real GUI surface
-    mon = xbmc.Monitor()
-    while not xbmc.getCondVisibility("Window.IsVisible(home)"):
-        if mon.abortRequested(): raise SystemExit
-        xbmc.sleep(100)
-
-    secs   = _get_float("duration", 8.0)
-    cols   = _get_int("columns", 48)
-    speed  = _get_int("speed_px", 18)
-    font   = ADDON.getSetting("font") or "font13"
-
-    log(f"starting rain: secs={secs}, columns={cols}, speed={speed}, font={font}")
-    win = RainWindow(secs, cols, speed, font)
-    win.run()
-    win.close()
-    del win
-    log("finished")
+    Service().run()
+EOF
+chmod 755 ~/.kodi/addons/service.boot-matrixfx/service.py
