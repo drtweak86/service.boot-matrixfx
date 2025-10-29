@@ -1,7 +1,6 @@
-cat > ~/.kodi/addons/service.boot-matrixfx/service.py <<'EOF'
 # -*- coding: utf-8 -*-
+import time, random
 import xbmc, xbmcgui, xbmcaddon
-import random, time
 
 ADDON  = xbmcaddon.Addon(id="service.boot-matrixfx")
 LOGTAG = "[service.boot-matrixfx] "
@@ -34,23 +33,23 @@ class RainWindow(xbmcgui.WindowDialog):
         self.w = self.getWidth()
         self.h = self.getHeight()
 
-        # Tight glyph set (fullwidth katakana + digits + A–Z) with no spaces
+        # Fullwidth katakana + digits + A–Z, no spaces so labels don’t break
         self.glyphs = u"ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
         self.col_w = max(10, self.w // self.columns)
         self.controls, self.state = [], []
 
-        # black backdrop
-        bg = xbmcgui.ControlImage(0, 0, self.w, self.h, "")
-        self.addControl(bg)
-        bg.setColorDiffuse("FF000000")
+        # Translucent black background
+        self.bg = xbmcgui.ControlImage(0, 0, self.w, self.h, "")
+        self.addControl(self.bg)
+        self.bg.setColorDiffuse("FF000000")
 
-        self._init_columns()
+        self._create_columns()
 
     def _rand_string(self, n):
         return u"".join(random.choice(self.glyphs) for _ in range(n))
 
-    def _init_columns(self):
+    def _create_columns(self):
         for i in range(self.columns):
             x = i * self.col_w + (self.col_w // 8)
             length = random.randint(8, 22)
@@ -72,7 +71,7 @@ class RainWindow(xbmcgui.WindowDialog):
                 y = random.randint(-self.h // 2, -20)
                 length = random.randint(8, 22)
                 ctl.setLabel(self._rand_string(length))
-                # subtle head highlight sometimes
+                # occasional brighter head
                 ctl.setTextColor("55A8FF55" if random.random() > 0.3 else "88CCFF88")
             ctl.setPosition(ctl.getX(), y)
             self.state[idx][0] = y
@@ -80,30 +79,30 @@ class RainWindow(xbmcgui.WindowDialog):
 
     def run(self):
         t0 = time.time()
-        xbmc.executebuiltin('Action(HideOSD)')
+        xbmc.executebuiltin("Action(HideOSD)")
         mon = xbmc.Monitor()
         while (time.time() - t0) < self.duration and not mon.abortRequested():
             self._tick()
-            xbmc.sleep(16)  # ~60fps
+            xbmc.sleep(16)  # ~60 fps
 
     def onAction(self, action):
-        # any key/touch closes early
+        # Any key/back closes
         self.close()
 
 class Service(xbmc.Monitor):
     def run(self):
-        log("service starting")
-        # Wait for Kodi home so we have a surface
+        # Wait for Home so we have a GUI surface
         while not xbmc.getCondVisibility("Window.IsVisible(home)"):
             if self.abortRequested():
-                log("aborted before home")
                 return
             xbmc.sleep(150)
-        xbmc.sleep(400)  # tiny settle
+        xbmc.sleep(400)
+
         secs  = get_float("duration", 8.0)
         cols  = get_int("columns", 48)
         speed = get_int("speed_px", 18)
         font  = ADDON.getSetting("font") or "font13"
+
         log(f"starting rain: secs={secs} cols={cols} speed={speed} font={font}")
         win = RainWindow(secs, cols, speed, font)
         try:
@@ -112,11 +111,9 @@ class Service(xbmc.Monitor):
         finally:
             try:
                 win.close()
-            except:
+            except Exception:
                 pass
         log("service finished")
 
 if __name__ == "__main__":
     Service().run()
-EOF
-chmod 755 ~/.kodi/addons/service.boot-matrixfx/service.py
