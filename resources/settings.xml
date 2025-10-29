@@ -1,8 +1,8 @@
 <settings>
-  <category label="Matrix FX">
-    <setting id="duration" type="number" label="Duration (seconds)" default="8.0" />
-    <setting id="columns"  type="number" label="Columns"           default="48" />
-    <setting id="speed_px" type="number" label="Speed (pixels/tick)" default="18" />
-    <setting id="font"     type="text"   label="Font (e.g. font13, font14)" default="font13" />
+  <category label="Matrix FX at boot">
+    <setting id="duration" type="number" label="Show for (seconds)" default="8.0" step="0.5" />
+    <setting id="columns"  type="number" label="Columns" default="48" step="2" />
+    <setting id="speed_px" type="number" label="Speed (px per tick)" default="18" step="1" />
+    <setting id="font"     type="string" label="Font (e.g. font13 / font12)" default="font13" />
   </category>
 </settings>
