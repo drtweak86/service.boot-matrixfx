@@ -1,6 +1,7 @@
+cat > ~/.kodi/addons/service.boot-matrixfx/addon.xml <<'EOF'
 <addon id="service.boot-matrixfx"
        name="Boot Matrix FX (Python)"
-       version="0.9.0"
+       version="0.9.1"
        provider-name="drtweak86">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
@@ -12,3 +13,5 @@
     <platform>all</platform>
   </extension>
 </addon>
+EOF
+chmod 644 ~/.kodi/addons/service.boot-matrixfx/addon.xml
