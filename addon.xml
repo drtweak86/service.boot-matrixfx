@@ -1,0 +1,14 @@
+<addon id="service.boot-matrixfx"
+       name="Boot Matrix FX (Python)"
+       version="0.9.0"
+       provider-name="drtweak86">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension point="xbmc.service" library="service.py" start="login" />
+  <extension point="xbmc.addon.metadata">
+    <summary>Full-screen Matrix “digital rain” at Kodi startup</summary>
+    <description>Pure Python renderer that draws falling glyphs in a modal window while Kodi finishes loading, then exits cleanly. No screensaver switching, no video playback.</description>
+    <platform>all</platform>
+  </extension>
+</addon>
